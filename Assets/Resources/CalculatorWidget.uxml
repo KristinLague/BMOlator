@@ -1,0 +1,71 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/Calculator.uss?fileID=7433441132597879392&amp;guid=e24c6b8e0c65d6e4db55e0fd079f2808&amp;type=3#Calculator" />
+    <ui:VisualElement name="calculatorVE" class="flex--grow color--dark-green">
+        <ui:GroupBox class="color--dark-green">
+            <ui:GroupBox class="color--light-green" style="border-left-color: rgb(29, 29, 29); border-right-color: rgb(29, 29, 29); border-top-color: rgb(29, 29, 29); border-bottom-color: rgb(29, 29, 29); border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px; border-top-left-radius: 17px; border-bottom-left-radius: 17px; border-top-right-radius: 17px; border-bottom-right-radius: 17px;">
+                <ui:ScrollView name="inputSV" focusable="false" style="height: 150px;" />
+                <ui:TextField name="inputTF" readonly="true" value="Enter at least two values to start!" class="text--num-inverted text--green" style="align-self: auto;" />
+            </ui:GroupBox>
+        </ui:GroupBox>
+        <ui:GroupBox class="flex--grow margin-padding-top--0px color--dark-green">
+            <ui:GroupBox name="numPadGB" class="flex--grow justify-content--space-between">
+                <ui:GroupBox name="numRowGB" class="direction--row justify-content--space-between height--20-percent margin-padding--0px">
+                    <ui:VisualElement name="7VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="7" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="8VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="8" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="9VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="9" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="divideVE" class="label--num align--center justify-content--center color--yellow">
+                        <ui:Label tabindex="-1" text="÷" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                </ui:GroupBox>
+                <ui:GroupBox name="numRowGB" class="direction--row justify-content--space-between height--20-percent margin-padding--0px">
+                    <ui:VisualElement name="4VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="4" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="5VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="5" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="6VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="6" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="timesVE" class="label--num align--center justify-content--center color--blue">
+                        <ui:Label tabindex="-1" text="×" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                </ui:GroupBox>
+                <ui:GroupBox name="numRowGB" class="direction--row justify-content--space-between height--20-percent margin-padding--0px">
+                    <ui:VisualElement name="1VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="1" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="2VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="2" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="3VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="3" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="minusVE" class="label--num align--center justify-content--center color--green" style="background-color: rgb(110, 250, 44);">
+                        <ui:Label tabindex="-1" text="-" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                </ui:GroupBox>
+                <ui:GroupBox name="numRowGB" class="direction--row justify-content--space-between height--20-percent margin-padding--0px">
+                    <ui:VisualElement name="0VE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="0" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="pushVE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="Push" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="acVE" class="label--num align--center justify-content--center">
+                        <ui:Label tabindex="-1" text="AC" display-tooltip-when-elided="true" name="acLB" class="text--num" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="plusVE" class="label--num align--center justify-content--center color--red">
+                        <ui:Label tabindex="-1" text="+" display-tooltip-when-elided="true" class="text--num" />
+                    </ui:VisualElement>
+                </ui:GroupBox>
+            </ui:GroupBox>
+        </ui:GroupBox>
+    </ui:VisualElement>
+</ui:UXML>
