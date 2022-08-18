@@ -19,6 +19,9 @@ public class CalculatorController : MonoBehaviour
     private int _calculationsSinceLastRandomNumber;
     private bool _isFetchingRandomNumber;
 
+    private float _last;
+    private float _secondToLast;
+
     private void Awake()
     {
         _activeUIDoc = gameObject.GetComponent<UIDocument>();
@@ -54,45 +57,57 @@ public class CalculatorController : MonoBehaviour
     /// <param name="op"></param>
     public void TryApplyOperator(string op)
     {
+        if (_isFetchingRandomNumber)
+        {
+            OnError?.Invoke("Couldn't perform operation while fetching random number!");
+            return;
+        }
+        
         if (_history.Count < 2)
         {
             OnError?.Invoke("Enter at least 2 values to perform an operation");
             return;
         }
 
-        float last = _history.Pop();
+        _last = _history.Pop();
         OnPop?.Invoke();
-        float secondToLast = _history.Pop();
+        _secondToLast = _history.Pop();
         OnPop?.Invoke();
+        
+        // Random number time!
+        if (_calculationsSinceLastRandomNumber == 9)
+        {
+            _isFetchingRandomNumber = true;
+            StartCoroutine(WebRequest());
+            _calculationsSinceLastRandomNumber = 0;
+            return;
+        }
         
         float calculationResult = 0;
         
         switch (op)
         {
             case "+":
-                calculationResult = secondToLast + last;
+                calculationResult = _secondToLast + _last;
                 break;
             case "-":
-                calculationResult = secondToLast - last;
+                calculationResult = _secondToLast - _last;
                 break;
             case "/":
-                if (last != 0)
+                if (_last != 0)
                 {
-                    calculationResult = secondToLast / last;
+                    calculationResult = _secondToLast / _last;
                 }
                 else
                 {
                     //Restoring the _history and then reporting the error!
-                    _history.Push(secondToLast);
-                    OnPush?.Invoke(secondToLast.ToString());
-                    _history.Push(last);
-                    OnPush?.Invoke(last.ToString());
+                    RestoreLastPopped();
                     OnError?.Invoke("Illegal - You can't divide by zero!");
                     return;
                 }
                 break;
             case "*":
-                calculationResult = secondToLast * last;
+                calculationResult = _secondToLast * _last;
                 break;
         }
         
@@ -100,14 +115,6 @@ public class CalculatorController : MonoBehaviour
         OnPush?.Invoke(calculationResult.ToString());
 
         _calculationsSinceLastRandomNumber++;
-        
-        // Random number time!
-        if (_calculationsSinceLastRandomNumber == 10)
-        {
-            _isFetchingRandomNumber = true;
-            StartCoroutine(WebRequest());
-            _calculationsSinceLastRandomNumber = 0;
-        }
     }
 
     /// <summary>
@@ -142,12 +149,25 @@ public class CalculatorController : MonoBehaviour
                 }
                 else
                 {
+                    RestoreLastPopped();
                     OnError?.Invoke("Couldn't parse random number to float!");
                 }
                 break;
         }
+        
+        if (webRequest.result != UnityWebRequest.Result.Success)
+            RestoreLastPopped();
+        
 
         _isFetchingRandomNumber = false;
+    }
+
+    private void RestoreLastPopped()
+    {
+        _history.Push(_secondToLast);
+        OnPush?.Invoke(_secondToLast.ToString());
+        _history.Push(_last);
+        OnPush?.Invoke(_last.ToString());
     }
     
     private void OnApplicationQuit()
