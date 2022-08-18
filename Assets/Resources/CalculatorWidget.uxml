@@ -3,7 +3,7 @@
     <ui:VisualElement name="calculatorVE" class="flex--grow color--dark-green">
         <ui:GroupBox class="color--dark-green">
             <ui:GroupBox class="color--light-green" style="border-left-color: rgb(29, 29, 29); border-right-color: rgb(29, 29, 29); border-top-color: rgb(29, 29, 29); border-bottom-color: rgb(29, 29, 29); border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px; border-top-left-radius: 17px; border-bottom-left-radius: 17px; border-top-right-radius: 17px; border-bottom-right-radius: 17px;">
-                <ui:ScrollView name="inputSV" focusable="false" style="height: 150px;" />
+                <ui:ScrollView name="inputSV" focusable="false" style="height: 150px; justify-content: flex-end; margin-right: 0;" />
                 <ui:TextField name="inputTF" readonly="true" value="Enter at least two values to start!" class="text--num-inverted text--green" style="align-self: auto;" />
             </ui:GroupBox>
         </ui:GroupBox>

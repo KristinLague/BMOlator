@@ -8,10 +8,10 @@
 
 .label--num {
     width: 23%;
-    border-top-left-radius: 40px;
-    border-bottom-left-radius: 40px;
-    border-top-right-radius: 40px;
-    border-bottom-right-radius: 40px;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
     background-color: rgba(255, 255, 255, 0.97);
     border-left-color: rgb(48, 48, 48);
     border-right-color: rgb(48, 48, 48);
@@ -62,12 +62,6 @@
 
 .align--flex-end {
     align-items: flex-end;
-}
-
-.unity-scroll-view__content-and-vertical-scroll-container {
-    justify-content: flex-end;
-    align-items: flex-end;
-    flex-grow: 1;
 }
 
 .text--num-inverted {
@@ -142,4 +136,9 @@
 
 .color--green {
     background-color: rgb(87, 231, 19);
+}
+
+.unity-scroll-view__content-container {
+    justify-content: flex-end;
+    flex-grow: 1;
 }
