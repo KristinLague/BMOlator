@@ -3,61 +3,30 @@ using UnityEngine.UIElements;
 
 public class CalculatorWidget : UIBase
 {
-    private readonly VisualElement _root;
-    private readonly CalculatorController _controller;
-    private readonly VisualTreeAsset _entryTemplate;
-    
     private string _currentInput;
-    private bool _isPushing;
-    private ClearMode _clearMode;
-    
-    #region UIElements
-    private VisualElement _naughtVe;
-    private VisualElement _oneVe;
-    private VisualElement _twoVe;
-    private VisualElement _threeVe;
-    private VisualElement _fourVe;
-    private VisualElement _fiveVe;
-    private VisualElement _sixVe;
-    private VisualElement _sevenVe;
-    private VisualElement _eightVe;
-    private VisualElement _nineVe;
 
-    private VisualElement _acVe;
-    private Label _acLb;
-    private VisualElement _plusVe;
-    private VisualElement _minusVe;
-    private VisualElement _timesVe;
-    private VisualElement _divideVe;
-
-    private TextField _inputTF;
-    private ScrollView _inputSV;
-    private VisualElement _pushVE;
-    #endregion
+    private readonly CalculatorController _controller;
+    private readonly VisualElement _root;
+    private readonly VisualTreeAsset _entryTemplate;
+    private Label _clearLabel;
+    private TextField _inputTextField;
+    private ScrollView _inputScrollView;
+    private VisualElement _pushVe;
 
     public CalculatorWidget(VisualElement root, CalculatorController controller)
     {
         _root = root;
         _controller = controller;
-        _currentInput = "";
-        
-        _controller.OnPop += OnPop;
-        _controller.OnPush += OnPush;
-        _controller.OnError += OnError;
-        
         _entryTemplate = Resources.Load("CalculatorEntry") as VisualTreeAsset;
+        _currentInput = "";
+
+        _controller.OnPop += RemovePreviousEntry;
+        _controller.OnPush += AddNewEntry;
+        _controller.OnError += DisplayError;
+        
         Setup();
     }
-
-    private void OnError(string errorMsg)
-    {
-        _currentInput = "";
-        _inputTF.value = errorMsg;
-    }
-
-    /// <summary>
-    /// Setup region for UIElements (caching items from the root-element and registering callbacks to them!)
-    /// </summary>
+    
     #region Setup
     public override void Setup()
     {
@@ -65,141 +34,185 @@ public class CalculatorWidget : UIBase
         SetVisualElements();
     }
 
+    /// <summary>
+    /// Caching all the UI Elements and hooking them up to their callback events!
+    /// </summary>
     private void SetVisualElements()
     {
-        _naughtVe = _root.Q<VisualElement>("0VE");
-        _oneVe    = _root.Q<VisualElement>("1VE");
-        _twoVe    = _root.Q<VisualElement>("2VE");
-        _threeVe  = _root.Q<VisualElement>("3VE");
-        _fourVe   = _root.Q<VisualElement>("4VE");
-        _fiveVe   = _root.Q<VisualElement>("5VE");
-        _sixVe    = _root.Q<VisualElement>("6VE");
-        _sevenVe  = _root.Q<VisualElement>("7VE");
-        _eightVe  = _root.Q<VisualElement>("8VE");
-        _nineVe   = _root.Q<VisualElement>("9VE");
-        _acVe     = _root.Q<VisualElement>("acVE");
-        _acLb     = _acVe.Q<Label>("acLB");
-        _plusVe   = _root.Q<VisualElement>("plusVE");
-        _minusVe  = _root.Q<VisualElement>("minusVE");
-        _timesVe  = _root.Q<VisualElement>("timesVE");
-        _divideVe = _root.Q<VisualElement>("divideVE");
-
-        _inputTF = _root.Q<TextField>("inputTF");
-        _inputSV = _root.Q<ScrollView>("inputSV");
-        _pushVE = _root.Q<VisualElement>("pushVE");
-
-        //_inputTF.textSelection.cursorColor = Color.white;
+        for (int i = 0; i < 10; i++)
+        {
+            string digit = i + "";
+            EventHelper.RegisterCallback<ClickEvent>(_root, digit + "VE", evt => TryAddValue(digit));
+        }
         
-        EventHelper.RegisterCallback<ClickEvent>(_naughtVe,(evt => AddNum("0")));
-        EventHelper.RegisterCallback<ClickEvent>(_oneVe,(evt => AddNum("1")));
-        EventHelper.RegisterCallback<ClickEvent>(_twoVe,(evt => AddNum("2")));
-        EventHelper.RegisterCallback<ClickEvent>(_threeVe,(evt => AddNum("3")));
-        EventHelper.RegisterCallback<ClickEvent>(_fourVe,(evt => AddNum("4")));
-        EventHelper.RegisterCallback<ClickEvent>(_fiveVe,(evt => AddNum("5")));
-        EventHelper.RegisterCallback<ClickEvent>(_sixVe,(evt => AddNum("6")));
-        EventHelper.RegisterCallback<ClickEvent>(_sevenVe,(evt => AddNum("7")));
-        EventHelper.RegisterCallback<ClickEvent>(_eightVe,(evt => AddNum("8")));
-        EventHelper.RegisterCallback<ClickEvent>(_nineVe,(evt => AddNum("9")));
-        EventHelper.RegisterCallback<ClickEvent>(_pushVE, evt => PushToStack());
-
-        EventHelper.RegisterValueChangedCallback(_inputTF, evt => _acLb.text = _clearMode is ClearMode.Clear ? "C" : "AC");
-        EventHelper.RegisterCallback<ClickEvent>(_acVe, evt => Clear(string.IsNullOrEmpty(_currentInput)));
-        EventHelper.RegisterCallback<ClickEvent>(_plusVe, evt => AddOperator("+"));
-        EventHelper.RegisterCallback<ClickEvent>(_minusVe, evt => AddOperator("-"));
-        EventHelper.RegisterCallback<ClickEvent>(_divideVe, evt => AddOperator("/"));
-        EventHelper.RegisterCallback<ClickEvent>(_timesVe, evt => AddOperator("*"));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "commaVE",(evt => TryAddValue(".")));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "plusVE", evt => TryApplyOperator("+"));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "minusVE", evt => TryApplyOperator("-"));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "divideVE", evt => TryApplyOperator("/"));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "timesVE", evt => TryApplyOperator("*"));
+        EventHelper.RegisterCallback<ClickEvent>(_root, "plusminusVE",(evt => InvertInput()));
+        
+        EventHelper.RegisterCallback<ClickEvent>(_root, "pushVE", evt => PushToStack());
+        EventHelper.RegisterCallback<ClickEvent>(_root, "acVE", evt => Clear(string.IsNullOrEmpty(_currentInput)));
+        
+        _clearLabel  = _root.Q<Label>("acLB");
+        _inputTextField = _root.Q<TextField>("inputTF");
+        _inputScrollView = _root.Q<ScrollView>("inputSV");
+        EventHelper.RegisterValueChangedCallback(_inputTextField, evt => _clearLabel.text = string.IsNullOrEmpty(_currentInput) ? "AC" : "C");
+        EventHelper.RegisterCallback<GeometryChangedEvent>(_inputScrollView.contentContainer, evt => _inputScrollView.verticalScroller.value = _inputScrollView.verticalScroller.highValue );
     }
     #endregion
 
-    private void AddNum(string num)
+    /// <summary>
+    /// Adding numerical values or comma to the current string.
+    /// </summary>
+    /// <param name="value"></param>
+    private void TryAddValue(string value)
     {
-        _currentInput += num;
-        _inputTF.value = _currentInput;
-
-        if (!string.IsNullOrEmpty(_currentInput))
-            _clearMode = ClearMode.Clear;
+        //Ensuring not more than one comma can be set!
+        if (value == "." && _currentInput.Contains('.'))
+            return;
+        
+        _currentInput += value;
+        _inputTextField.value = _currentInput;
     }
 
-    private void AddOperator(string op)
+    /// <summary>
+    /// Tries to apply an operation. If the current input isn't cleared at that stage, then push
+    /// the current input first and then run the operation
+    /// </summary>
+    /// <param name="op"></param>
+    private void TryApplyOperator(string op)
     {
-        
-        //If there was already input in the textfield we should push that input to the stack before 
-        //executing our calculation for the clicked operator!
         if (!string.IsNullOrEmpty(_currentInput))
-        {
             PushToStack();
-        }
+        
         Clear();
-        _controller.AddToStack(op);
+        _controller.TryApplyOperator(op);
+    }
+
+    /// <summary>
+    /// Inverts the current input from a negative to a positive number and vise-versa.
+    /// </summary>
+    private void InvertInput()
+    {
+        if (_currentInput.StartsWith('-'))
+        {
+            _currentInput = _currentInput.Substring(1, _currentInput.Length - 1);
+        }
+        else
+        {
+            FormatInput();
+            _currentInput = "-" + _currentInput;
+        }
+
+        _inputTextField.value = _currentInput;
     }
     
+    /// <summary>
+    /// Pushes the current input to the stack history!
+    /// </summary>
     private void PushToStack()
     {
-        if (_isPushing || string.IsNullOrEmpty(_currentInput))
-            return;
+        FormatInput();
 
-        var pushedEntry = _entryTemplate.Instantiate();
-        var entryLogic = new CalculatorEntry();
-        pushedEntry.userData = entryLogic;
-        entryLogic.SetVisualElement(pushedEntry);
-        entryLogic.SetData(_currentInput);
-        _inputSV.Add(pushedEntry);
-        _controller.AddToStack(_currentInput);
-        Clear();
-        _currentInput = "";
-
-        _isPushing = false;
+        if (ValidateInput())
+        {
+            AddNewEntry(_currentInput);
+            _controller.TryPushToStack(_currentInput);
+            Clear();
+        }
     }
 
-    private void OnPop()
+    /// <summary>
+    /// Removes the last entry from the UI
+    /// </summary>
+    private void RemovePreviousEntry()
     {
-        var index = _inputSV.childCount == 0 ? 0 : _inputSV.childCount - 1;
-        if (_inputSV[index] == null)
-            return;
-        
-        _inputSV[index].RemoveFromHierarchy();
+        if (_inputScrollView.childCount > 0)
+        {
+            _inputScrollView[_inputScrollView.childCount-1].RemoveFromHierarchy();
+        }
     }
 
-    private void OnPush(string value)
+    /// <summary>
+    /// Pushes the latest entry to the UI
+    /// </summary>
+    /// <param name="value"></param>
+    private void AddNewEntry(string value)
     {
         var pushedEntry = _entryTemplate.Instantiate();
         var entryLogic = new CalculatorEntry();
         pushedEntry.userData = entryLogic;
         entryLogic.SetVisualElement(pushedEntry);
         entryLogic.SetData(value);
-        _inputSV.Add(pushedEntry);
+        _inputScrollView.Add(pushedEntry);
+    }
+    
+    /// <summary>
+    /// Displays incoming error messages in the Textfield!
+    /// </summary>
+    /// <param name="errorMsg"></param>
+    private void DisplayError(string errorMsg)
+    {
+        _currentInput = "";
+        _inputTextField.value = errorMsg;
     }
 
+    #region Helpers
+    /// <summary>
+    /// Format the input with leading/trailing zeros
+    /// </summary>
+    private void FormatInput()
+    {
+        if (_currentInput.StartsWith('.'))
+            _currentInput = "0" + _currentInput;
+
+        if (_currentInput.EndsWith('.'))
+            _currentInput += "0";
+    }
+    
+    /// <summary>
+    /// Check if the input is valid to be pushed to the stack
+    /// </summary>
+    private bool ValidateInput()
+    {
+        if (_currentInput.StartsWith('-') && _currentInput.Length == 1)
+            return false;
+        if (string.IsNullOrEmpty(_currentInput))
+            return false;
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Clearing input and all history (if we are in clearAll-mode).
+    /// </summary>
+    /// <param name="clearAll"></param>
     private void Clear(bool clearAll = false)
     {
-        _inputTF.value = "";
-        _clearMode = ClearMode.AllClear;
+        _inputTextField.value = "";
         _currentInput = "";
 
         if (clearAll)
         {
-            for (int i = 0; i < _inputSV.childCount; i++)
+            for (int i = 0; i < _inputScrollView.childCount; i++)
             {
-                (_inputSV[i].userData as CalculatorEntry)?.Dispose();
-                _inputSV[i].RemoveFromHierarchy();
+                (_inputScrollView[i].userData as CalculatorEntry)?.Dispose();
+                _inputScrollView[i].RemoveFromHierarchy();
             }
-            _inputSV.Clear();
+            _inputScrollView.Clear();
             _controller.ClearStack();
         }
     }
+    #endregion
 
     public override void Dispose()
     {
         base.Dispose();
-        _controller.OnPop += OnPop;
-        _controller.OnPush += OnPush;
-        _controller.OnError -= OnError;
+        _controller.OnPop += RemovePreviousEntry;
+        _controller.OnPush += AddNewEntry;
+        _controller.OnError -= DisplayError;
         _controller.ClearStack();
-    }
-
-    private enum ClearMode
-    {
-        AllClear,
-        Clear
     }
 }

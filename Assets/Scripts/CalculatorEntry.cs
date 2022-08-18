@@ -1,9 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UIElements;
 
-public class CalculatorEntry
+public class CalculatorEntry : UIBase
 {
     public string Value { get; private set; }
     
@@ -20,10 +17,5 @@ public class CalculatorEntry
     {
         Value = value;
         _entryLB.text = Value;
-    }
-
-    public void Dispose()
-    {
-        
     }
 }

@@ -1,167 +1,177 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using UnityEngine;
+using System.Collections;
 using UnityEngine.Networking;
 using UnityEngine.UIElements;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 public class CalculatorController : MonoBehaviour
 {
-    private UIDocument _activeUIDoc;
-    private CalculatorWidget _calculatorWidget;
-    
-    public Action<string> OnPush;
     public Action OnPop;
+    public Action<string> OnPush;
     public Action<string> OnError;
+    
+    private UIDocument _activeUIDoc;
+    private Stack<float> _history;
+    private CalculatorWidget _widget;
+    
+    private int _calculationsSinceLastRandomNumber;
+    private bool _isFetchingRandomNumber;
 
-    private int _calculationCounter;
-
-    public Stack<float> EntryStack { get; private set; }
-
-    void Awake()
+    private void Awake()
     {
-        _calculationCounter = 0;
         _activeUIDoc = gameObject.GetComponent<UIDocument>();
-        _calculatorWidget = new CalculatorWidget(_activeUIDoc.rootVisualElement, this);
-        EntryStack = new Stack<float>();
+        _widget = new CalculatorWidget(_activeUIDoc.rootVisualElement, this);
+        _history = new Stack<float>();
     }
     
-    public void AddToStack(string value)
+    /// <summary>
+    /// Try push the given value to the stack
+    /// </summary>
+    /// <param name="enteredValue"></param>
+    public void TryPushToStack(string enteredValue)
     {
-        switch (value)
+        if (_isFetchingRandomNumber)
+        {
+            OnError?.Invoke("Couldn't push value while fetching random number!");
+            return;
+        }
+
+        if (float.TryParse(enteredValue, out float result))
+        {
+            _history.Push(result);
+        }
+        else
+        {
+            OnError?.Invoke("Couldn't parse entered value to float!");
+        }
+    }
+    
+    /// <summary>
+    /// Try applying the given operation (+, -, \, *)
+    /// </summary>
+    /// <param name="op"></param>
+    public void TryApplyOperator(string op)
+    {
+        if (_history.Count < 2)
+        {
+            OnError?.Invoke("Enter at least 2 values to perform an operation");
+            return;
+        }
+
+        float last = _history.Pop();
+        OnPop?.Invoke();
+        float secondToLast = _history.Pop();
+        OnPop?.Invoke();
+        
+        float calculationResult = 0;
+        
+        switch (op)
         {
             case "+":
-                Calculate(CalcType.Add);
+                calculationResult = secondToLast + last;
                 break;
             case "-":
-                Calculate(CalcType.Subtract);
+                calculationResult = secondToLast - last;
                 break;
             case "/":
-                Calculate(CalcType.Divide);
+                if (last != 0)
+                {
+                    calculationResult = secondToLast / last;
+                }
+                else
+                {
+                    //Restoring the _history and then reporting the error!
+                    _history.Push(secondToLast);
+                    OnPush?.Invoke(secondToLast.ToString());
+                    _history.Push(last);
+                    OnPush?.Invoke(last.ToString());
+                    OnError?.Invoke("Illegal - You can't divide by zero!");
+                    return;
+                }
                 break;
             case "*":
-                Calculate(CalcType.Multiply);
+                calculationResult = secondToLast * last;
                 break;
-            default:
-            {
-                if (float.TryParse(value, out float result))
-                    EntryStack.Push(result);
-                break;
-            }
+        }
+        
+        _history.Push(calculationResult);
+        OnPush?.Invoke(calculationResult.ToString());
+
+        _calculationsSinceLastRandomNumber++;
+        
+        // Random number time!
+        if (_calculationsSinceLastRandomNumber == 10)
+        {
+            _isFetchingRandomNumber = true;
+            StartCoroutine(WebRequest());
+            _calculationsSinceLastRandomNumber = 0;
         }
     }
 
+    /// <summary>
+    /// Executing a web request to receive a random value that is then added to the _history stack.
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator WebRequest()
     {
+        OnPush?.Invoke("Fetching a random result..");
         UnityWebRequest webRequest = UnityWebRequest.Get(@"https://www.randomnumberapi.com/api/v1.0/random?min=100&max=1000&count=1");
         yield return webRequest.SendWebRequest();
+        
+        // Remove the "Fetching random result" message
+        OnPop?.Invoke();
 
         switch (webRequest.result)
         {
             case UnityWebRequest.Result.ConnectionError:
-                OnError?.Invoke("Connection Error" + ": Error: " + webRequest.error);
+                OnError?.Invoke("Connection Error: " + webRequest.error);
                 break;
             case UnityWebRequest.Result.DataProcessingError:
-                OnError?.Invoke("Processing Error" + ": Error: " + webRequest.error);
+                OnError?.Invoke("Processing Error: " + webRequest.error);
                 break;
             case UnityWebRequest.Result.ProtocolError:
-                OnError?.Invoke("Protocol Error" + ": HTTP Error: " + webRequest.error);
+                OnError?.Invoke("HTTP Error:" + webRequest.error);
                 break;
             case UnityWebRequest.Result.Success:
-                int resultInt = GetValue(webRequest.downloadHandler.text);
-                EntryStack.Push(resultInt);
-                OnPush?.Invoke("RANDOM: " + resultInt);
+                if (TryParseWebResponse(webRequest.downloadHandler.text, out float randomValue))
+                {
+                    _history.Push(randomValue);
+                    OnPush?.Invoke("RANDOM: " + randomValue);
+                }
+                else
+                {
+                    OnError?.Invoke("Couldn't parse random number to float!");
+                }
                 break;
         }
-    }
 
-    private int GetValue(string result)
+        _isFetchingRandomNumber = false;
+    }
+    
+    private void OnApplicationQuit()
     {
-        string numbersOnly = Regex.Replace(result, "[^0-9]", "");
-        int.TryParse(numbersOnly, out int value);
-        return value;
+        _widget.Dispose();
+        ClearStack();
+    }
+    
+    /// <summary>
+    /// Parse the random web result to a float!
+    /// </summary>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    private bool TryParseWebResponse(string response, out float randomValue)
+    {
+        string numbersOnly = Regex.Replace(response, "[^0-9]", "");
+        return float.TryParse(numbersOnly, out randomValue);
     }
 
     public void ClearStack()
     {
-        EntryStack.Clear();
-        _calculationCounter = 0;
-    }
-    
-    private void Calculate(CalcType calcType)
-    {
-        if (EntryStack.Count < 2)
-        {
-            OnError?.Invoke("Enter at least 2 values to make a operation");
-            return;
-        }
-
-        if (_calculationCounter > 0)
-        {
-            if (_calculationCounter % 10 == 0)
-            {
-                StartCoroutine(WebRequest());
-                _calculationCounter++;
-                return;
-            }
-        }
-
-        if (EntryStack.TryPop(out float last))
-        {
-            if (EntryStack.TryPop(out float secondToLast))
-            {
-                switch (calcType)
-                {
-                    case CalcType.Add:
-                        OnPop?.Invoke();
-                        OnPop?.Invoke();
-                        float additionResult = (float) secondToLast + (float) last;
-                        EntryStack.Push(additionResult);
-                        OnPush?.Invoke(additionResult.ToString());
-                        break;
-                    case CalcType.Subtract:
-                        OnPop?.Invoke();
-                        OnPop?.Invoke();
-                        float subtractionResult = secondToLast - last;
-                        EntryStack.Push(subtractionResult);
-                        OnPush?.Invoke(subtractionResult.ToString());
-                        break;
-                    case CalcType.Divide:
-                        if (last != 0)
-                        {
-                            OnPop?.Invoke();
-                            OnPop?.Invoke();
-                            float divisionResult = last == 0 ? 0 : secondToLast / last;
-                            EntryStack.Push(divisionResult);
-                            OnPush?.Invoke(divisionResult.ToString());
-                        }
-                        else
-                        {
-                            OnError?.Invoke("Illegal - You can't divide by zero!");
-                            return;
-                        }
-                        break;
-                    case CalcType.Multiply:
-                        OnPop?.Invoke();
-                        OnPop?.Invoke();
-                        float multiplicationResult = secondToLast * last;
-                        EntryStack.Push(multiplicationResult);
-                        OnPush?.Invoke(multiplicationResult.ToString());
-                        break;
-                }
-
-                _calculationCounter++;
-            }
-        }
+        _history.Clear();
+        _calculationsSinceLastRandomNumber = 0;
     }
 
-    private enum CalcType
-    {
-        Add,
-        Subtract,
-        Multiply,
-        Divide
-    }
 }
 
